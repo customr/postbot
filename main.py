@@ -10,13 +10,13 @@ import settings
 
 
 def ordered_set(array):
-		orset = []
+	orset = []
 
-		for item in array:
-			if item not in orset:
-				orset.append(item)
+	for item in array:
+		if item not in orset:
+			orset.append(item)
 
-		return orset
+	return orset
 
 
 class Client:
