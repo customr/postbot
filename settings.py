@@ -22,9 +22,10 @@ API_V = 5.92
 #default user params
 OPTIONS_PARAMS = (
 	'GROUP_ID', #group where make posts
-	'COUNTS', #double digit, first - count of photos per post, second - count of audio per post
-	'PHRASES', #tuple of phrases to choice
-	'HOURS', #list of hours to post everyday
+	'COUNT_PHOTO', #how much photos per post
+	'COUNT_AUDIO', #how much audio per post
+	'PHRASES', #sequence of phrases to choice
+	'HOURS', #hours to post everyday
 	'MINUTE', #minute of post time
 	'PHOTO_ID', #last posted photo pointer
 	'AUDIO_ID', #last posted audio pointer

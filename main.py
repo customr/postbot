@@ -9,6 +9,16 @@ from random import choice
 import settings
 
 
+def ordered_set(array):
+		orset = []
+
+		for item in array:
+			if item not in orset:
+				orset.append(item)
+
+		return orset
+
+
 class Client:
 	"""
 	Params:
@@ -28,8 +38,8 @@ class Client:
 
 		if not self.options_exist:
 			self.create_optionsfile()
-		else:
-			self.parse_optionsfile()
+		
+		self.parse_optionsfile()
 
 		if (not self.photo_exist or not self.audio_exist) or update:
 			photo_htmlname = input('\nPhoto html name: ')
@@ -39,10 +49,9 @@ class Client:
 
 		self.parse_mediafiles()
 
-	def get_ids(self):
-		#generator that yields data of ids to make 1 post
-		counts_photo = int(self.COUNTS[0])
-		counts_audio = int(self.COUNTS[1])
+	def get_ids(self): #generator that yields data to make 1 post
+		counts_photo = int(self.COUNT_PHOTO)
+		counts_audio = int(self.COUNT_AUDIO)
 		self.pid = 0
 		self.aid = 0
 	
@@ -64,18 +73,18 @@ class Client:
 
 			yield data
 
-	def save_ids(self):
+	def save_ids(self, offset):
 		settings_old = open(settings.OPTIONS_DIR + str(self.group_id), 'r').readlines()
 		settings_new = open(settings.OPTIONS_DIR + str(self.group_id), 'w+')
 
 		for line in settings_old:
 			if 'PHOTO_ID' in line:
-				new_id = int(line.split(' = ')[1]) + self.pid
+				new_id = int(line.split(' = ')[1]) + self.pid + offset*int(self.COUNT_PHOTO)
 				settings_new.write(f'PHOTO_ID = {new_id}\n')
 				self.pid = 0
 
 			elif 'AUDIO_ID' in line:
-				new_id = int(line.split(' = ')[1]) + self.aid
+				new_id = int(line.split(' = ')[1]) + self.aid + offset*int(self.COUNT_AUDIO)
 				settings_new.write(f'AUDIO_ID = {new_id}\n')
 				self.aid = 0
 
@@ -126,7 +135,6 @@ class Client:
 		options_file.close()
 
 		input('Waiting for parse settings... [Press ENTER if ready to parse it]')
-		self.parse_optionsfile()
 		
 	def parse_optionsfile(self):
 		options_file = open(os.path.join(settings.OPTIONS_DIR, str(self.group_id)), 'r')
@@ -145,7 +153,7 @@ class Client:
 			html_file = open(os.path.join(settings.HTML_DIR, html_name+'.html'), 'r', encoding="latin-1").read()
 			ids = re.findall(r'\d{9}_\d{9}|-\d{8}_\d{9}', html_file) #search id in that unique format
 
-			return ids[::4] #TODO: make unsorted set of list
+			return ordered_set(ids)
 
 		else:
 			return []
@@ -183,15 +191,14 @@ class Post:
 
 		return times
 
-	def post(self):
-		#main loop
+	def run(self): #main loop
 		for day in range(self.range):
 			times = self.get_times(day)
 			for d in range(len(times)):
 				try:
 					data = next(self.id)
 
-				except StopIteration: #starts over the list
+				except StopIteration: #starts over the list again
 					self.id = self.client.get_ids()
 					data = next(self.id)
 
@@ -203,7 +210,12 @@ class Post:
 				req += f'&access_token={settings.ACCESS_TOKEN}&v={settings.API_V}'
 
 				print(attachments)
-				requests.get(req)
+
+				response = requests.get(req)
+				
+				if 'error' in response.json().keys():
+					self.client.save_ids(-1)
+					raise Exception(response.json()['error']['error_msg'])
 
 				sleep(0.3)
 
@@ -229,4 +241,4 @@ if __name__=='__main__':
 	client = Client(params['g'], params['u'])
 	bot = Post(client, params['r'], params['d'], params['m'])
 
-	bot.post()
+	bot.run()
