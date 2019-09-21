@@ -23,7 +23,11 @@ class Client:
 	"""
 	Params:
 		group_id (int): id of group to make posts
+		photo_list (list): list of photo ids
+		audio_list (list): list of audio ids
 		update (bool): if True, uploads new ids to database
+		pid (int): photo pointer
+		aid (int): audio pointer
 	"""
 	def __init__(self, group_id, update=False):
 		self.group_id = group_id
@@ -74,6 +78,10 @@ class Client:
 			yield data
 
 	def save_ids(self, offset):
+		"""
+		Args:
+			offset (int): moves pointer to that offset
+		"""
 		settings_old = open(settings.OPTIONS_DIR + str(self.group_id), 'r').readlines()
 		settings_new = open(settings.OPTIONS_DIR + str(self.group_id), 'w+')
 
@@ -94,6 +102,11 @@ class Client:
 		settings_new.close()
 
 	def create_mediafiles(self, photo_html, audio_html):
+		"""
+		Args:
+			photo_html (str): name of html file that contains in HTML_DIR
+			audio_html (str): name of html file that contains in HTML_DIR
+		"""
 		photo_file = open(settings.PHOTO_DIR + str(self.group_id), 'w+')
 		audio_file = open(settings.AUDIO_DIR + str(self.group_id), 'w+')
 		
