@@ -4,7 +4,7 @@ import os
 import requests
 from time import sleep, mktime, strftime
 from datetime import datetime
-from random import choice
+from random import choice, shuffle
 
 import settings
 
@@ -29,8 +29,21 @@ class Client:
 		pid (int): photo pointer
 		aid (int): audio pointer
 	"""
-	def __init__(self, group_id, update=False):
-		self.group_id = group_id
+	def __init__(self, group_num, update=False):
+
+		if -10000000<group_num<10000000: #otherwise it's unique group id format (9 digits)
+			with open('clients_list.txt', 'r') as r_list:
+				try:
+					group_id = r_list.readlines()[group_num-1]
+				except Exception as ex:
+					print('Error in client_list.txt\n', ex)
+				else:
+					assert group_num==group_id.split('@')[0]
+					self.group_id = int(group_id.split('@')[1])
+
+		else:
+			self.group_id = group_num
+
 		self.photo_list = []
 		self.audio_list = []
 		self.update = update
@@ -61,16 +74,16 @@ class Client:
 	
 		while True:
 			data = [[], [], '']
-
+			#even if in our data list will run out of data, we will starts over the list
 			if len(self.photo_list)>0:
 				for _ in range(counts_photo):
 					data[0].append(self.photo_list[self.pid%len(self.photo_list)])
-					self.pid += 1
+					self.pid += 1 #update pointer
 
 			if len(self.audio_list)>0:
 				for _ in range(counts_audio):
 					data[1].append(self.audio_list[self.aid%len(self.audio_list)])
-					self.aid += 1
+					self.aid += 1 #update pointer
 
 			if self.PHRASES:
 				data[2] = choice(self.PHRASES)
@@ -80,11 +93,12 @@ class Client:
 	def save_ids(self, offset):
 		"""
 		Args:
-			offset (int): moves pointer to that offset
+			offset (int): moves index pointer to that offset
 		"""
 		settings_old = open(settings.OPTIONS_DIR + str(self.group_id), 'r').readlines()
 		settings_new = open(settings.OPTIONS_DIR + str(self.group_id), 'w+')
 
+		#found lines with id's and saves new values
 		for line in settings_old:
 			if 'PHOTO_ID' in line:
 				new_id = int(line.split(' = ')[1]) + self.pid + offset*int(self.COUNT_PHOTO)
@@ -122,30 +136,41 @@ class Client:
 			audio_file.write(uid+'\n')
 
 	def parse_mediafiles(self):
+		#get file with ids from base
 		photo_file = open(settings.PHOTO_DIR + str(self.group_id), 'r')
 		
 		#uploads data to client
 		for uid in photo_file.readlines()[int(self.PHOTO_ID):]:
 			self.photo_list.append(uid.rstrip('\n'))
 
+		#if we have audio list to post with
 		if self.audio_exist:
 			audio_file = open(settings.AUDIO_DIR + str(self.group_id), 'r')
 
 			for uid in audio_file.readlines()[int(self.AUDIO_ID):]:
 				self.audio_list.append(uid.rstrip('\n'))
 
+			if self.SHUFFLE_AUDIO:
+				shuffle(self.audio_list)
+
 	def create_optionsfile(self):
 		options_file = open(settings.OPTIONS_DIR + str(self.group_id), 'w+')
 
 		for param in settings.OPTIONS_PARAMS:
-			#if we have that parameter, we want to save him in settings
+			#if we have that parameter, we want to keep him in settings
 			if param.lower() in self.__dict__.keys():
 				options_file.write(f'{param} = {getattr(self, param.lower())}\n')
-
 			else:
 				options_file.write(f'{param} = \n')
 
 		options_file.close()
+
+		#get last group number for writing next
+		with open('clients_list.txt', 'r') as r_list:
+			last_id = len(r_list.readlines())
+
+		with open('clients_list.txt', 'a') as w_list:
+			w_list.write(f'\n{last_id+1}@{self.group_id}')
 
 		input('Waiting for parse settings... [Press ENTER if ready to parse it]')
 		
@@ -170,6 +195,7 @@ class Client:
 
 		else:
 			return []
+
 
 
 class Post:
@@ -239,10 +265,10 @@ if __name__=='__main__':
 	parser = argparse.ArgumentParser()
 
 	parser.add_argument('-g', type=int, 
-		help="Group id to post.")
-	parser.add_argument('-r', type=int, 
+		help="Group number **from clients_list.txt**.")
+	parser.add_argument('-r', type=int, default=0,
 		help="How many days to make posts.")
-	parser.add_argument('-d', type=int, 
+	parser.add_argument('-d', type=int, default=0, 
 		help="From which day bot must start posting.")
 	parser.add_argument('-u', type=bool, default=False, 
 		help="Update mediafiles.")
