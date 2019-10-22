@@ -1,4 +1,14 @@
-import argparse
+"""2019
+AUTHOR: Shipitsin Maxim
+USERNAME: customr
+GITHUB: https://github.com/customr/
+EMAIL: shipicin_max@mail.ru
+
+Scructure:
+	-Client: initializes client, keeps all his attributes
+	-Post: vk-api worker, based on client
+"""
+
 import re
 import os
 import requests
@@ -6,17 +16,7 @@ from time import sleep, mktime, strftime
 from datetime import datetime
 from random import choice, shuffle
 
-import settings
-
-
-def ordered_set(array):
-	orset = []
-
-	for item in array:
-		if item not in orset:
-			orset.append(item)
-
-	return orset
+import postbot.settings as settings
 
 
 class Client:
@@ -170,7 +170,10 @@ class Client:
 			last_id = len(r_list.readlines())
 
 		with open('clients_list.txt', 'a') as w_list:
-			w_list.write(f'\n{last_id+1}@{self.group_id}')
+			if last_id==0:
+				w_list.write(f'1@{self.group_id}')
+			else:
+				w_list.write(f'\n{last_id+1}@{self.group_id}')
 
 		input('Waiting for parse settings... [Press ENTER if ready to parse it]')
 		
@@ -187,6 +190,15 @@ class Client:
 		
 	@staticmethod
 	def html_parseid(html_name):
+		def ordered_set(array):
+			orset = []
+
+			for item in array:
+				if item not in orset:
+					orset.append(item)
+
+			return orset
+
 		if html_name != '':
 			html_file = open(os.path.join(settings.HTML_DIR, html_name+'.html'), 'r', encoding="latin-1").read()
 			ids = re.findall(r'\d{9}_\d{9}|-\d{8}_\d{9}', html_file) #search id in that unique format
@@ -212,6 +224,7 @@ class Post:
 		self.range = drange
 		self.from_day = from_day
 		self.new_month = new_month
+		self.saveday = 1 #crutch for new month exception
 		self.id = self.client.get_ids()
 
 	def get_times(self, dshift):
@@ -222,10 +235,18 @@ class Post:
 		"""
 		y = int(strftime('%Y'))
 		m =	int(strftime('%m'))
+		d = self.from_day+dshift
 		times = []
 
 		for hour in self.client.HOURS:
-			dt = datetime(year=y, month=m+self.new_month, day=self.from_day+dshift, hour=hour, minute=int(self.client.MINUTE))
+			try:
+				dt = datetime(year=y, month=m+self.new_month, day=d%self.saveday, hour=hour, minute=int(self.client.MINUTE))
+			except Exception:
+				assert self.new_month<2 #leave if we'll get two errors in a row
+				self.new_month += 1
+				self.from_day -= 1
+				self.saveday = d-1
+
 			times.append(int(mktime(dt.timetuple())))
 
 		return times
@@ -259,25 +280,3 @@ class Post:
 				sleep(0.3)
 
 		self.client.save_ids()
-
-
-if __name__=='__main__':
-	parser = argparse.ArgumentParser()
-
-	parser.add_argument('-g', type=int, 
-		help="Group number **from clients_list.txt**.")
-	parser.add_argument('-r', type=int, default=0,
-		help="How many days to make posts.")
-	parser.add_argument('-d', type=int, default=0, 
-		help="From which day bot must start posting.")
-	parser.add_argument('-u', type=bool, default=False, 
-		help="Update mediafiles.")
-	parser.add_argument('-m', type=bool, default=False, 
-		help="If true - makes posts on the next month.")
-
-	params = vars(parser.parse_args())
-
-	client = Client(params['g'], params['u'])
-	bot = Post(client, params['r'], params['d'], params['m'])
-
-	bot.run()
