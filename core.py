@@ -9,9 +9,10 @@ Structure:
 	-Post: VK-api worker, based on Client
 """
 
-import re
 import os
+import re
 import requests
+import time
 from time import sleep, mktime, strftime
 from datetime import datetime
 from random import choice, shuffle
@@ -32,7 +33,7 @@ class Client:
 	"""
 	def __init__(self, group_num, update=False):
 
-		if -10000000<group_num<10000000: #otherwise it's unique group id format (9 digits)
+		if 0<group_num<1000: #otherwise it's unique group id format (9 digits)
 			with open('clients_list.txt', 'r') as r_list:
 				try:
 					group_id = r_list.readlines()[group_num-1]
@@ -132,10 +133,16 @@ class Client:
 		self.audio_ids = html_parser(audio_html)
 
 		#loads data into database
+		if int(self.SHUFFLE_PHOTO):
+			shuffle(self.photo_ids)
+
+		if int(self.SHUFFLE_AUDIO):
+			shuffle(self.audio_ids)
+
 		for uid in self.photo_ids:
 			photo_file.write(uid+'\n')
 
-		for uid in self.audio_ids:
+		for uid in self.audio_ids[1:]: #starts from 1 because first id is not from album
 			audio_file.write(uid+'\n')
 
 	def parse_mediafiles(self):
@@ -153,8 +160,6 @@ class Client:
 			for uid in audio_file.readlines()[int(self.AUDIO_ID):]:
 				self.audio_list.append(uid.rstrip('\n'))
 
-			if int(self.SHUFFLE_AUDIO):
-				shuffle(self.audio_list)
 
 	def create_optionsfile(self):
 		options_file = open(settings.OPTIONS_DIR + str(self.group_id), 'w+')
@@ -235,11 +240,15 @@ class Post:
 		return times
 
 	def run(self): #main loop
+		info = f'\nGROUP={self.client.group_id}\nRANGE={self.range}\nFROM_DAY={self.from_day}'
+		make_log('') #means to print separator
+		make_log(info)
+
 		for day in range(self.range):
 			times = self.get_times(day)
 			for d in range(len(times)):
 				try:
-					data = next(self.id)
+					data = next(self.id) #[[photos], [audios], [phrase]]
 
 				except StopIteration: #starts over the list again
 					self.id = self.client.get_ids()
@@ -252,14 +261,29 @@ class Post:
 				req += f'&attachments={attachments}&message={data[2]}&publish_date={times[d]}'
 				req += f'&access_token={settings.ACCESS_TOKEN}&v={settings.API_V}'
 
-				print(attachments)
+				ntime = datetime.fromtimestamp(times[d])
+				ntime = ntime.strftime('%m/%d %H:%M:%S')
+				make_log(f'\n\tPOST: {attachments} TIME={ntime}')
 
 				response = requests.get(req)
 				
 				if 'error' in response.json().keys():
 					self.client.save_ids(-1)
-					raise Exception(response.json()['error']['error_msg'])
+					error = response.json()['error']['error_msg']
+					make_log(f'ERROR: {error}')
+					raise SystemExit(error)
 
 				sleep(0.3)
 
 		self.client.save_ids()
+
+
+def make_log(message):
+	with open(settings.LOG_DIR, 'a') as log:
+		if message:
+			ntime = time.strftime('%c')
+			message = f'\n[{ntime}] {message}'
+			log.write(message)
+
+		else:
+			log.write('-'*90)

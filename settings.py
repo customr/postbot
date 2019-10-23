@@ -8,6 +8,7 @@ AUDIO_DIR = os.path.join(BASE_DIR, 'clients/audio/')
 OPTIONS_DIR = os.path.join(BASE_DIR, 'clients/options/')
 ACCESS_TOKEN_DIR = os.path.join(BASE_DIR, 'access_token.txt')
 CLIENTS_LIST_DIR = os.path.join(BASE_DIR, 'clients_list.txt')
+LOG_DIR = os.path.join(BASE_DIR, 'logs.txt')
 
 SAVE_DIR = '/home/customr/Downloads' #where html files should be saved
 
@@ -22,6 +23,9 @@ if not os.path.exists(ACCESS_TOKEN_DIR):
 
 if not os.path.exists(CLIENTS_LIST_DIR):
 	open(CLIENTS_LIST_DIR, 'w')
+
+if not os.path.exists(LOG_DIR):
+	open(LOG_DIR, 'w')
 
 
 #read access token
@@ -41,6 +45,7 @@ OPTIONS_PARAMS = (
 	'AUDIO_ID', 	#last posted audio pointer
 	'PHOTO_URL', 	#url of photos to post
 	'AUDIO_URL', 	#url of audios to post
+	'SHUFFLE_PHOTO',#flag for randomly shuffles photo data
 	'SHUFFLE_AUDIO',#flag for randomly shuffles audio data
 	'RENT_FROM', 	#date from where bot were rented
 	'USER_URL' 		#client vk page
