@@ -31,17 +31,17 @@ API_V = 5.92
 
 #default user params
 OPTIONS_PARAMS = (
-	'GROUP_ID', 	#group where make posts
+	'GROUP_ID', 	#group id or num where to make posts
 	'COUNT_PHOTO', 	#how much photos per post
 	'COUNT_AUDIO', 	#how much audio per post
-	'PHRASES', 		#sequence of phrases to choice
-	'HOURS', 		#hours to post everyday
+	'PHRASES', 		#phrases to choice with comma separator
+	'HOURS', 		#hours to post everyday comma separated
 	'MINUTE', 		#minute of post time
 	'PHOTO_ID', 	#last posted photo pointer
 	'AUDIO_ID', 	#last posted audio pointer
 	'PHOTO_URL', 	#url of photos to post
 	'AUDIO_URL', 	#url of audios to post
-	'SHUFFLE_AUDIO',#randomly shuffles audio data
+	'SHUFFLE_AUDIO',#flag for randomly shuffles audio data
 	'RENT_FROM', 	#date from where bot were rented
-	'USER_ID' 		#client id
+	'USER_URL' 		#client vk page
 	)

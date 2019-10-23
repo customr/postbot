@@ -4,7 +4,7 @@ USERNAME: customr
 GITHUB: https://github.com/customr/
 EMAIL: shipicin_max@mail.ru
 
-Scructure:
+Structure:
 	-Client: initializes client, keeps all his attributes
 	-Post: VK-api worker, based on Client
 """
