@@ -6,7 +6,7 @@ EMAIL: shipicin_max@mail.ru
 
 Scructure:
 	-Client: initializes client, keeps all his attributes
-	-Post: vk-api worker, based on client
+	-Post: VK-api worker, based on Client
 """
 
 import re
@@ -16,7 +16,8 @@ from time import sleep, mktime, strftime
 from datetime import datetime
 from random import choice, shuffle
 
-import postbot.settings as settings
+import settings
+from parser import html_parser, album_parser
 
 
 class Client:
@@ -38,8 +39,8 @@ class Client:
 				except Exception as ex:
 					print('Error in client_list.txt\n', ex)
 				else:
-					assert group_num==group_id.split('@')[0]
-					self.group_id = int(group_id.split('@')[1])
+					assert group_num==int(group_id.split('@')[0])
+					self.group_id = int(group_id.split('@')[1].rstrip('\n'))
 
 		else:
 			self.group_id = group_num
@@ -59,8 +60,10 @@ class Client:
 		self.parse_optionsfile()
 
 		if (not self.photo_exist or not self.audio_exist) or update:
-			photo_htmlname = input('\nPhoto html name: ')
-			audio_htmlname = input('\nAudio html name: ')
+			photo_htmlname = input('\nPhoto album id: ')
+			audio_htmlname = ''
+			if int(self.COUNT_AUDIO):
+				audio_htmlname = input('\nAudio html name: ')
 
 			self.create_mediafiles(photo_htmlname, audio_htmlname)
 
@@ -90,10 +93,10 @@ class Client:
 
 			yield data
 
-	def save_ids(self, offset):
+	def save_ids(self, offset=0):
 		"""
 		Args:
-			offset (int): moves index pointer to that offset
+			offset (int): if we need to backup for *offset* days
 		"""
 		settings_old = open(settings.OPTIONS_DIR + str(self.group_id), 'r').readlines()
 		settings_new = open(settings.OPTIONS_DIR + str(self.group_id), 'w+')
@@ -115,18 +118,18 @@ class Client:
 
 		settings_new.close()
 
-	def create_mediafiles(self, photo_html, audio_html):
+	def create_mediafiles(self, album_id, audio_html):
 		"""
 		Args:
-			photo_html (str): name of html file that contains in HTML_DIR
-			audio_html (str): name of html file that contains in HTML_DIR
+			photo_html (str): name of html file that contains in SAVE_DIR
+			audio_html (str): name of html file that contains in SAVE_DIR
 		"""
 		photo_file = open(settings.PHOTO_DIR + str(self.group_id), 'w+')
 		audio_file = open(settings.AUDIO_DIR + str(self.group_id), 'w+')
 		
 		#parse ids from html file
-		self.photo_ids = Client.html_parseid(photo_html)
-		self.audio_ids = Client.html_parseid(audio_html)
+		self.photo_ids = album_parser(album_id)
+		self.audio_ids = html_parser(audio_html)
 
 		#loads data into database
 		for uid in self.photo_ids:
@@ -150,7 +153,7 @@ class Client:
 			for uid in audio_file.readlines()[int(self.AUDIO_ID):]:
 				self.audio_list.append(uid.rstrip('\n'))
 
-			if self.SHUFFLE_AUDIO:
+			if int(self.SHUFFLE_AUDIO):
 				shuffle(self.audio_list)
 
 	def create_optionsfile(self):
@@ -186,29 +189,8 @@ class Client:
 
 		self.HOURS = list(map(int, self.HOURS.split(',')))
 		self.MINUTE = int(self.MINUTE)
-		self.PHRASES = re.findall(r"\w[a-z]*", self.PHRASES)
+		self.PHRASES = self.PHRASES.split(',')
 		
-	@staticmethod
-	def html_parseid(html_name):
-		def ordered_set(array):
-			orset = []
-
-			for item in array:
-				if item not in orset:
-					orset.append(item)
-
-			return orset
-
-		if html_name != '':
-			html_file = open(os.path.join(settings.HTML_DIR, html_name+'.html'), 'r', encoding="latin-1").read()
-			ids = re.findall(r'\d{9}_\d{9}|-\d{8}_\d{9}', html_file) #search id in that unique format
-
-			return ordered_set(ids)
-
-		else:
-			return []
-
-
 
 class Post:
 	"""
@@ -224,7 +206,7 @@ class Post:
 		self.range = drange
 		self.from_day = from_day
 		self.new_month = new_month
-		self.saveday = 1 #crutch for new month exception
+		self.saveday = 0 #crutch for new month exception
 		self.id = self.client.get_ids()
 
 	def get_times(self, dshift):
@@ -240,12 +222,13 @@ class Post:
 
 		for hour in self.client.HOURS:
 			try:
-				dt = datetime(year=y, month=m+self.new_month, day=d%self.saveday, hour=hour, minute=int(self.client.MINUTE))
+				dt = datetime(year=y, month=m+self.new_month, day=d-self.saveday, hour=hour, minute=int(self.client.MINUTE))
 			except Exception:
 				assert self.new_month<2 #leave if we'll get two errors in a row
 				self.new_month += 1
 				self.from_day -= 1
 				self.saveday = d-1
+				dt = datetime(year=y, month=m+self.new_month, day=d%self.saveday, hour=hour, minute=int(self.client.MINUTE))
 
 			times.append(int(mktime(dt.timetuple())))
 

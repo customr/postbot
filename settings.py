@@ -9,13 +9,20 @@ OPTIONS_DIR = os.path.join(BASE_DIR, 'clients/options/')
 ACCESS_TOKEN_DIR = os.path.join(BASE_DIR, 'access_token.txt')
 CLIENTS_LIST_DIR = os.path.join(BASE_DIR, 'clients_list.txt')
 
-HTML_DIR = '/home/customr/Downloads' #where html files have been saved
+SAVE_DIR = '/home/customr/Downloads' #where html files should be saved
+
+
+#create dir's and file's if not exists
+for directory in (PHOTO_DIR, AUDIO_DIR, OPTIONS_DIR):
+	if not os.path.exists(directory):
+		os.makedirs(directory)
 
 if not os.path.exists(ACCESS_TOKEN_DIR):
-	open(ACCESS_TOKEN_DIR, 'w').write(input('Access token: ')).close()
+	open(ACCESS_TOKEN_DIR, 'w').write(input('VK access token: ')).close()
 
 if not os.path.exists(CLIENTS_LIST_DIR):
 	open(CLIENTS_LIST_DIR, 'w')
+
 
 #read access token
 ACCESS_TOKEN = open(ACCESS_TOKEN_DIR, 'r').readline()
