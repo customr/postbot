@@ -134,9 +134,11 @@ class Client:
 
 		#loads data into database
 		if int(self.SHUFFLE_PHOTO):
+			print('SHUFFLE PHOTO')
 			shuffle(self.photo_ids)
 
 		if int(self.SHUFFLE_AUDIO):
+			print('SHUFFLE AUDIO')
 			shuffle(self.audio_ids)
 
 		for uid in self.photo_ids:
@@ -190,7 +192,7 @@ class Client:
 
 		for option in options_file.readlines():
 			param, value = option.split(' = ')
-			setattr(self, param, value)
+			setattr(self, param, value.rstrip('\n'))
 
 		self.HOURS = list(map(int, self.HOURS.split(',')))
 		self.MINUTE = int(self.MINUTE)
@@ -203,7 +205,7 @@ class Post:
 		client (Client object): client object
 		drange (int): how many days to make posts
 		from_day (int): starts from that day
-		new_month (bool): if true: posts on the next month
+		new_month (int): this month + this value
 		id (generator): returns tuples of data to post
 	"""
 	def __init__(self, client, drange, from_day, new_month=0):
@@ -229,11 +231,9 @@ class Post:
 			try:
 				dt = datetime(year=y, month=m+self.new_month, day=d-self.saveday, hour=hour, minute=int(self.client.MINUTE))
 			except Exception:
-				assert self.new_month<2 #leave if we'll get two errors in a row
 				self.new_month += 1
-				self.from_day -= 1
-				self.saveday = d-1
-				dt = datetime(year=y, month=m+self.new_month, day=d%self.saveday, hour=hour, minute=int(self.client.MINUTE))
+				self.saveday = d+1
+				dt = datetime(year=y, month=m+self.new_month, day=d-self.saveday, hour=hour, minute=int(self.client.MINUTE))
 
 			times.append(int(mktime(dt.timetuple())))
 
@@ -273,17 +273,18 @@ class Post:
 					make_log(f'ERROR: {error}')
 					raise SystemExit(error)
 
-				sleep(0.3)
+				sleep(0.5)
 
 		self.client.save_ids()
 
 
 def make_log(message):
-	with open(settings.LOG_DIR, 'a') as log:
-		if message:
-			ntime = time.strftime('%c')
-			message = f'\n[{ntime}] {message}'
-			log.write(message)
+	if settings.LOG:
+		with open(settings.LOG_DIR, 'a') as log:
+			if message:
+				ntime = time.strftime('%c')
+				message = f'\n[{ntime}] {message}'
+				log.write(message)
 
-		else:
-			log.write('-'*90)
+			else:
+				log.write('\n'+'-'*90)

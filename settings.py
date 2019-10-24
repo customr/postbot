@@ -50,3 +50,5 @@ OPTIONS_PARAMS = (
 	'RENT_FROM', 	#date from where bot were rented
 	'USER_URL' 		#client vk page
 	)
+
+LOG = True #make logs or not

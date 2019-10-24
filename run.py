@@ -12,10 +12,12 @@ parser.add_argument('-d', type=int, default=0,
 	help="From which day bot must start posting.")
 parser.add_argument('-u', type=bool, default=False, 
 	help="Update mediafiles.")
+parser.add_argument('-m', type=int, default=0, 
+	help="This month + this value.")
 
 params = vars(parser.parse_args())
 
 client = pb.Client(params['g'], params['u'])
-bot = pb.Post(client, params['r'], params['d'])
+bot = pb.Post(client, params['r'], params['d'], params['m'])
 
 bot.run()

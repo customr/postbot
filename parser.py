@@ -15,18 +15,27 @@ def album_parser(album_id):
 		list with ids
 	"""
 	album_id = str(album_id).split('_')
+	access_part = f'&access_token={settings.ACCESS_TOKEN}&v={settings.API_V}&'
 	request = 'https://api.vk.com/method/photos.get?'
-	request += f'owner_id={album_id[0]}&album_id={album_id[1]}&count=1000'
-	request += f'&access_token={settings.ACCESS_TOKEN}&v={settings.API_V}'
+	request += f'owner_id={album_id[0]}&album_id={album_id[1]}&count=1000&rev=1'
 
-	req = requests.get(request)
-	req = req.json()
+	all_ids = []
+	for i in range(10):
+		ids = []
+		req = request + f'offset={i*1000}' + access_part
+		req = requests.get(req)
+		req = req.json()
 
-	ids = []
-	for item in req['response']['items']:
-		ids.append(f'{item["owner_id"]}_{item["id"]}')
+		if 'error' in req.keys():
+			raise SystemExit(req['error'])
 
-	return ids[::-1]
+		for item in req['response']['items']:
+			if item in all_ids: break
+			ids.append(f'{item["owner_id"]}_{item["id"]}')
+
+		all_ids.extend(ids)	
+
+	return all_ids
 
 
 def html_parser(html_name):
