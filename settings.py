@@ -38,6 +38,8 @@ OPTIONS_PARAMS = (
 	'GROUP_ID', 	#group id or num where to make posts
 	'COUNT_PHOTO', 	#how much photos per post
 	'COUNT_AUDIO', 	#how much audio per post
+	'UNIQUE_PHOTO', #break posting if detected previously used id
+	'UNIQUE_AUDIO', #break posting if detected previously used id
 	'PHRASES', 		#phrases to choice with comma separator
 	'HOURS', 		#hours to post everyday comma separated
 	'MINUTE', 		#minute of post time

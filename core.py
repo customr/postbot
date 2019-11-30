@@ -5,8 +5,11 @@ GITHUB: https://github.com/customr/
 EMAIL: shipicin_max@mail.ru
 
 Structure:
-	-Client: initializes client, keeps all his attributes
+	-Client: id-manager, keeps all clients attributes and returns batches of data
 	-Post: VK-api worker, based on Client
+
+function 'get_ids' is the main function in Client
+it can return you batch of data in special client's format for one post
 """
 
 import os
@@ -18,7 +21,6 @@ from datetime import datetime
 from random import choice, shuffle
 
 import settings
-from parser import html_parser, album_parser
 
 
 class Client:
@@ -38,7 +40,7 @@ class Client:
 				try:
 					group_id = r_list.readlines()[group_num-1]
 				except Exception as ex:
-					print('Error in client_list.txt\n', ex)
+					print('Error in client_list.txt\n\n', ex)
 				else:
 					assert group_num==int(group_id.split('@')[0])
 					self.group_id = int(group_id.split('@')[1].rstrip('\n'))
@@ -75,18 +77,37 @@ class Client:
 		counts_audio = int(self.COUNT_AUDIO)
 		self.pid = 0
 		self.aid = 0
-	
+
+		last_photoid = ''
+		last_audioid = ''
+
+		if int(self.UNIQUE_PHOTO):
+			last_photoid = input("Get photo while didn't met id: ")
+
+		if int(self.UNIQUE_AUDIO):
+			last_audioid = input("Get audio while didn't met id: ")
+
 		while True:
 			data = [[], [], '']
 			#even if in our data list will run out of data, we will starts over the list
 			if len(self.photo_list)>0:
 				for _ in range(counts_photo):
-					data[0].append(self.photo_list[self.pid%len(self.photo_list)])
+					id = self.photo_list[self.pid%len(self.photo_list)]
+					data[0].append(id)
+
+					if id == last_photoid:
+						raise ValueError('Detected previosly used photo id')
+
 					self.pid += 1 #update pointer
 
 			if len(self.audio_list)>0:
 				for _ in range(counts_audio):
-					data[1].append(self.audio_list[self.aid%len(self.audio_list)])
+					id = self.audio_list[self.aid%len(self.audio_list)]
+					data[1].append(id)
+
+					if id == last_audioid:
+						raise ValueError('Detected previosly used audio id')
+
 					self.aid += 1 #update pointer
 
 			if self.PHRASES:
@@ -129,23 +150,25 @@ class Client:
 		audio_file = open(settings.AUDIO_DIR + str(self.group_id), 'w+')
 		
 		#parse ids from html file
-		self.photo_ids = album_parser(album_id)
-		self.audio_ids = html_parser(audio_html)
+		self.photo_ids = Client.album_parser(album_id)
+		self.audio_ids = Client.html_parser(audio_html)
 
 		#loads data into database
 		if int(self.SHUFFLE_PHOTO):
-			print('SHUFFLE PHOTO')
+			print('SHUFFLING PHOTO')
 			shuffle(self.photo_ids)
 
 		if int(self.SHUFFLE_AUDIO):
-			print('SHUFFLE AUDIO')
+			print('SHUFFLING AUDIO')
 			shuffle(self.audio_ids)
 
-		for uid in self.photo_ids:
-			photo_file.write(uid+'\n')
+		if len(self.photo_ids):
+			for uid in self.photo_ids:
+				photo_file.write(uid+'\n')
 
-		for uid in self.audio_ids[1:]: #starts from 1 because first id is not from album
-			audio_file.write(uid+'\n')
+		if len(self.audio_ids):
+			for uid in self.audio_ids[1:]: #starts from 1 because of html parse crutch
+				audio_file.write(uid+'\n')
 
 	def parse_mediafiles(self):
 		#get file with ids from base
@@ -197,10 +220,70 @@ class Client:
 		self.HOURS = list(map(int, self.HOURS.split(',')))
 		self.MINUTE = int(self.MINUTE)
 		self.PHRASES = self.PHRASES.split(',')
-		
 
-class Post:
-	"""
+	@staticmethod
+	def album_parser(album_id):
+		"""Get photo ids in album by VK-api method
+
+		Args:
+			album_id (int): must be in format 'ownerid_albumid'
+
+		Return:
+			list with ids
+		"""
+		album_id = str(album_id).split('_')
+		access_part = f'&access_token={settings.ACCESS_TOKEN}&v={settings.API_V}&'
+		request = 'https://api.vk.com/method/photos.get?'
+		request += f'owner_id={album_id[0]}&album_id={album_id[1]}&count=1000&rev=1'
+
+		all_ids = []
+		for i in range(10):
+			ids = []
+			req = request + f'offset={i*1000}' + access_part
+			req = requests.get(req)
+			req = req.json()
+
+			if 'error' in req.keys():
+				raise SystemExit(req['error'])
+
+			for item in req['response']['items']:
+				if f'{item["owner_id"]}_{item["id"]}' in all_ids: break
+				ids.append(f'{item["owner_id"]}_{item["id"]}')
+
+			all_ids.extend(ids)	
+
+		return all_ids
+
+	@staticmethod
+	def html_parser(html_name):
+		"""VK-api haven't get-method for audio, so i decided to parse them from html 
+		
+		Args:
+			html_name (str): name of saved html file in SAVE_DIR
+
+		Return:
+			list with ids
+		"""
+		def ordered_set(array):
+			orset = []
+
+			for item in array:
+				if item not in orset:
+					orset.append(item)
+
+			return orset
+
+		if html_name != '':
+			html_file = open(os.path.join(settings.SAVE_DIR, html_name+'.html'), 'r', encoding="latin-1").read()
+			ids = re.findall(r'\d{9}_\d{9}|-\d{8}_\d{9}', html_file) #search id in that unique format
+
+			return ordered_set(ids)
+
+		return []
+
+
+class PostBot:
+	"""making posts for client
 	Params:
 		client (Client object): client object
 		drange (int): how many days to make posts
@@ -208,8 +291,8 @@ class Post:
 		new_month (int): this month + this value
 		id (generator): returns tuples of data to post
 	"""
-	def __init__(self, client, drange, from_day, new_month=0):
-		self.client = client
+	def __init__(self, group_num, update, drange, from_day, new_month=0):
+		self.client = Client(group_num, update)
 		self.range = drange
 		self.from_day = from_day
 		self.new_month = new_month
@@ -233,6 +316,10 @@ class Post:
 			except Exception:
 				self.new_month += 1
 				self.saveday = d+1
+				if m+self.new_month>12:
+					m = 1
+					self.new_month = 0
+
 				dt = datetime(year=y, month=m+self.new_month, day=d-self.saveday, hour=hour, minute=int(self.client.MINUTE))
 
 			times.append(int(mktime(dt.timetuple())))

@@ -1,5 +1,5 @@
 import argparse
-import core as pb
+import core
 
 
 parser = argparse.ArgumentParser()
@@ -17,7 +17,5 @@ parser.add_argument('-m', type=int, default=0,
 
 params = vars(parser.parse_args())
 
-client = pb.Client(params['g'], params['u'])
-bot = pb.Post(client, params['r'], params['d'], params['m'])
-
+bot = core.PostBot(params['g'], params['u'], params['r'], params['d'], params['m'])
 bot.run()
