@@ -7,9 +7,6 @@ EMAIL: shipicin_max@mail.ru
 Structure:
 	-Client: id-manager, keeps all clients attributes and returns batches of data
 	-Post: VK-api worker, based on Client
-
-function 'get_ids' is the main function in Client
-it can return you batch of data in special client's format for one post
 """
 
 import os
@@ -24,16 +21,23 @@ import settings
 
 
 class Client:
-	"""
+	"""id-manager, keeps all clients attributes and returns batches of data
+	Attrs:
+		group_num (int): id or number of group to make posts
+		uniq_p (str): yields data while photo id != this value
+		uniq_a (str): yields data while audio id != this value
+		update (bool): if True, uploads new ids to database
+
 	Params:
-		group_id (int): id of group to make posts
 		photo_list (list): list of photo ids
 		audio_list (list): list of audio ids
-		update (bool): if True, uploads new ids to database
 		pid (int): photo pointer
 		aid (int): audio pointer
+
+	function 'get_ids' is the main function in Client
+	it can return for you batch of data in special client's format for one post
 	"""
-	def __init__(self, group_num, update=False):
+	def __init__(self, group_num, uniq_p='', uniq_a='', update=False):
 
 		if 0<group_num<1000: #otherwise it's unique group id format (9 digits)
 			with open('clients_list.txt', 'r') as r_list:
@@ -50,6 +54,8 @@ class Client:
 
 		self.photo_list = []
 		self.audio_list = []
+		self.unique_photo = uniq_p
+		self.unique_audio = uniq_a
 		self.update = update
 
 		#check what we need to create
@@ -78,15 +84,6 @@ class Client:
 		self.pid = 0
 		self.aid = 0
 
-		last_photoid = ''
-		last_audioid = ''
-
-		if int(self.UNIQUE_PHOTO):
-			last_photoid = input("Get photo while didn't met id: ")
-
-		if int(self.UNIQUE_AUDIO):
-			last_audioid = input("Get audio while didn't met id: ")
-
 		while True:
 			data = [[], [], '']
 			#even if in our data list will run out of data, we will starts over the list
@@ -95,7 +92,7 @@ class Client:
 					id = self.photo_list[self.pid%len(self.photo_list)]
 					data[0].append(id)
 
-					if id == last_photoid:
+					if id == self.unique_photo:
 						raise ValueError('Detected previosly used photo id')
 
 					self.pid += 1 #update pointer
@@ -105,7 +102,7 @@ class Client:
 					id = self.audio_list[self.aid%len(self.audio_list)]
 					data[1].append(id)
 
-					if id == last_audioid:
+					if id == self.unique_audio:
 						raise ValueError('Detected previosly used audio id')
 
 					self.aid += 1 #update pointer
@@ -149,11 +146,11 @@ class Client:
 		photo_file = open(settings.PHOTO_DIR + str(self.group_id), 'w+')
 		audio_file = open(settings.AUDIO_DIR + str(self.group_id), 'w+')
 		
-		#parse ids from html file
+		#parse ids from saved on disk html file
 		self.photo_ids = Client.album_parser(album_id)
 		self.audio_ids = Client.html_parser(audio_html)
 
-		#loads data into database
+		#shuffles data if needed before being saved
 		if int(self.SHUFFLE_PHOTO):
 			print('SHUFFLING PHOTO')
 			shuffle(self.photo_ids)
@@ -162,6 +159,7 @@ class Client:
 			print('SHUFFLING AUDIO')
 			shuffle(self.audio_ids)
 
+		#loads data into database
 		if len(self.photo_ids):
 			for uid in self.photo_ids:
 				photo_file.write(uid+'\n')
@@ -208,7 +206,7 @@ class Client:
 			else:
 				w_list.write(f'\n{last_id+1}@{self.group_id}')
 
-		input('Waiting for parse settings... [Press ENTER if ready to parse it]')
+		input('Please, set client options (/clients/options/)... [Press ENTER if ready to parse it]')
 		
 	def parse_optionsfile(self):
 		options_file = open(os.path.join(settings.OPTIONS_DIR, str(self.group_id)), 'r')
@@ -217,6 +215,7 @@ class Client:
 			param, value = option.split(' = ')
 			setattr(self, param, value.rstrip('\n'))
 
+		#parameters that required more complicated parsing procedures
 		self.HOURS = list(map(int, self.HOURS.split(',')))
 		self.MINUTE = int(self.MINUTE)
 		self.PHRASES = self.PHRASES.split(',')
@@ -236,6 +235,8 @@ class Client:
 		request = 'https://api.vk.com/method/photos.get?'
 		request += f'owner_id={album_id[0]}&album_id={album_id[1]}&count=1000&rev=1'
 
+		#because vk-api won't give us a permission 
+		#to parse more than 1000 photos per one request 
 		all_ids = []
 		for i in range(10):
 			ids = []
@@ -265,6 +266,7 @@ class Client:
 			list with ids
 		"""
 		def ordered_set(array):
+			#unique values with the same order
 			orset = []
 
 			for item in array:
@@ -283,20 +285,26 @@ class Client:
 
 
 class PostBot:
-	"""making posts for client
-	Params:
-		client (Client object): client object
+	"""working in pair with client, scope - make posts
+	Attrs:
+		group_num (int): id or number of group to make posts
+		uniq_p (str): yields data while photo id != this value
+		uniq_a (str): yields data while audio id != this value
+		update (bool): if True, uploads new ids to database
 		drange (int): how many days to make posts
 		from_day (int): starts from that day
 		new_month (int): this month + this value
+
+	Params:
+		saveday (int): crutch for new month exception
 		id (generator): returns tuples of data to post
 	"""
-	def __init__(self, group_num, update, drange, from_day, new_month=0):
-		self.client = Client(group_num, update)
+	def __init__(self, group_num, update, uniq_p, uniq_a, drange, from_day, new_month=0):
+		self.client = Client(group_num, update, uniq_p, uniq_a)
 		self.range = drange
 		self.from_day = from_day
 		self.new_month = new_month
-		self.saveday = 0 #crutch for new month exception
+		self.saveday = 0
 		self.id = self.client.get_ids()
 
 	def get_times(self, dshift):
@@ -312,7 +320,11 @@ class PostBot:
 
 		for hour in self.client.HOURS:
 			try:
-				dt = datetime(year=y, month=m+self.new_month, day=d-self.saveday, hour=hour, minute=int(self.client.MINUTE))
+				dt = datetime(
+					year=y, month=m+self.new_month, 
+					day=d-self.saveday, hour=hour, 
+					minute=int(self.client.MINUTE)
+					)
 			except Exception:
 				self.new_month += 1
 				self.saveday = d+1
@@ -320,7 +332,11 @@ class PostBot:
 					m = 1
 					self.new_month = 0
 
-				dt = datetime(year=y, month=m+self.new_month, day=d-self.saveday, hour=hour, minute=int(self.client.MINUTE))
+				dt = datetime(
+					year=y, month=m+self.new_month, 
+					day=d-self.saveday, hour=hour, 
+					minute=int(self.client.MINUTE)
+					)
 
 			times.append(int(mktime(dt.timetuple())))
 
@@ -328,7 +344,7 @@ class PostBot:
 
 	def run(self): #main loop
 		info = f'\nGROUP={self.client.group_id}\nRANGE={self.range}\nFROM_DAY={self.from_day}'
-		make_log('') #means to print separator
+		make_log('') #means we want print separator
 		make_log(info)
 
 		for day in range(self.range):
