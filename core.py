@@ -5,8 +5,16 @@ GITHUB: https://github.com/customr/
 EMAIL: shipicin_max@mail.ru
 
 Structure:
-	-Client: id-manager, keeps all clients attributes and returns batches of data
-	-Post: VK-api worker, based on Client
+	-Client: data-manager, keeps all clients attributes and returns batches of data
+	-Post: VK-api worker, collaborates with Client
+
+not quite good optimization, but actually we don't need that
+because VK-api doesn't allow us to make requests too often
+
+TODO: 
+	1. color recognizer, that can make an assembly of similar photos (most common color)
+	   based on my other project COLORSCHEME (https://github.com/customr/COLORSCHEME)
+	2. add README.md
 """
 
 import os
