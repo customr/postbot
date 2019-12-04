@@ -2,7 +2,6 @@
 AUTHOR: Shipitsin Maxim
 USERNAME: customr
 GITHUB: https://github.com/customr/
-EMAIL: shipicin_max@mail.ru
 
 Structure:
 	-Client: data-manager, keeps all clients attributes and returns batches of data
@@ -11,10 +10,14 @@ Structure:
 not quite good optimization, but actually we don't need that
 because VK-api doesn't allow us to make requests too often
 
+Requirements:
+	settings.py file
+	"requests" module
+
 TODO: 
 	1. color recognizer, that can make an assembly of similar photos (most common color)
 	   based on my other project COLORSCHEME (https://github.com/customr/COLORSCHEME)
-	2. add README.md
+	2. update README.md
 """
 
 import os
