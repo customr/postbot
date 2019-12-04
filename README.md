@@ -15,8 +15,13 @@ and then they can be scheduled in his VK-group with his flexible settings
 
 **`python3 run.py -g=123456789 -r=5 -d=1`**
 
+<<<<<<< HEAD
 ####run.py flags:
 - **-g** (int) - Group number or id
+=======
+#### run.py flags:
+- **-g** (int) - Group number or id
+>>>>>>> 1a3767b036105e15f43cddbf70d62ba3996ef623
 - **-r** (int) - How many days to make posts
 - **-d** (int) - From which day bot must start posting
 - **-u** (bool) - Update mediafiles if True

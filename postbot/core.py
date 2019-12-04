@@ -325,7 +325,7 @@ class PostBot:
 			dshift (int): offset from start
 		"""
 		y = int(strftime('%Y'))
-		m =	int(strftime('%m'))
+		m = int(strftime('%m'))
 		d = self.from_day+dshift
 		times = []
 
