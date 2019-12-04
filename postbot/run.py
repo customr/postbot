@@ -13,9 +13,9 @@ parser.add_argument('-d', type=int, default=0,
 parser.add_argument('-u', type=bool, default=False, 
 	help="Update mediafiles.")
 parser.add_argument('--up', type=str, default='', 
-	help="Posting while didn't met that photo id.")
+	help="Posting while didn't met photo id.")
 parser.add_argument('--ua', type=str, default='', 
-	help="Posting while didn't met that audio id.")
+	help="Posting while didn't met audio id.")
 parser.add_argument('-m', type=int, default=0, 
 	help="This month + this value.")
 
