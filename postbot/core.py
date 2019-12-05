@@ -1,5 +1,5 @@
 """2019
-AUTHOR: Shipitsin Maxim
+AUTHOR: Maksim Shipitsin
 USERNAME: customr
 GITHUB: https://github.com/customr/
 
@@ -10,9 +10,7 @@ Structure:
 not quite good optimization, but actually we don't need that
 because VK-api doesn't allow us to make requests too often
 
-Requirements:
-	settings.py file
-	"requests" module
+!!KEEP THIS FILE WITH settings.py
 
 TODO: 
 	1. color recognizer, that can make an assembly of similar photos (most common color)
@@ -22,8 +20,9 @@ TODO:
 
 import os
 import re
-import requests
+import json
 import time
+import urllib.request
 from time import sleep, mktime, strftime
 from datetime import datetime
 from random import choice, shuffle
@@ -252,8 +251,8 @@ class Client:
 		for i in range(10):
 			ids = []
 			req = request + f'offset={i*1000}' + access_part
-			req = requests.get(req)
-			req = req.json()
+			req = urllib.request.urlopen(req).read().decode('utf-8')
+			req = json.loads(req)
 
 			if 'error' in req.keys():
 				raise SystemExit(req['error'])
@@ -310,11 +309,11 @@ class PostBot:
 		saveday (int): crutch for new month exception
 		id (generator): returns tuples of data to post
 	"""
-	def __init__(self, group_num, update, uniq_p, uniq_a, drange, from_day, new_month=0):
+	def __init__(self, group_num, drange, from_day, update, uniq_p, uniq_a, new_month=0):
 		self.client = Client(group_num, update, uniq_p, uniq_a)
-		self.range = drange
-		self.from_day = from_day
-		self.new_month = new_month
+		self.range = int(drange)
+		self.from_day = int(from_day)
+		self.new_month = int(new_month)
 		self.saveday = 0
 		self.id = self.client.get_ids()
 
@@ -341,7 +340,9 @@ class PostBot:
 				self.saveday = d+1
 				if m+self.new_month>12:
 					m = 1
+					y += 1
 					self.new_month = 0
+					self.saveday = 0
 
 				dt = datetime(
 					year=y, month=m+self.new_month, 
@@ -379,11 +380,12 @@ class PostBot:
 				ntime = ntime.strftime('%m/%d %H:%M:%S')
 				make_log(f'\n\tPOST: {attachments} TIME={ntime}')
 
-				response = requests.get(req)
+				req = urllib.request.urlopen(req).read().decode('utf-8')
+				req = json.loads(req)
 				
-				if 'error' in response.json().keys():
+				if 'error' in req.keys():
 					self.client.save_ids(-1)
-					error = response.json()['error']['error_msg']
+					error = req['error']['error_msg']
 					make_log(f'ERROR: {error}')
 					raise SystemExit(error)
 

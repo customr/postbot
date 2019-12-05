@@ -1,5 +1,5 @@
 """2019
-AUTHOR: Shipitsin Maxim
+AUTHOR: Maksim Shipitsin
 USERNAME: customr
 GITHUB: https://github.com/customr/
 
