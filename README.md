@@ -6,7 +6,7 @@ Created for simplify life of VK-group editors.
 Editor of community group only need to add photos or audio to special place
 and then they can be scheduled in his VK-group with his flexible settings
 
-## Sample how to run it
+## Sample how you can run it
 #### Steps:
 1. run run.py as a sample below
 2. if you run it for the first time for your group, program will be waiting while you not set options in newly created file **/clients/options/*groupid***
@@ -38,7 +38,6 @@ and then they can be scheduled in his VK-group with his flexible settings
 		these files contains audio ids separated with \n
 - **core.py** (main file, contains Client and Postbot classes)
 - **settings.py** (managing files and set global options)
-- **run.py** (sample code how you can run it)
 - **logs.txt** (saves all posting history)
 - **clients.txt** (you can use this numeric contractions instead of full group id)
 - **access_token.txt** (contains your VK-api access token)

@@ -27,18 +27,18 @@ from time import sleep, mktime, strftime
 from datetime import datetime
 from random import choice, shuffle
 
-import settings
+import postbot.settings as settings
 
 
 class Client:
 	"""id-manager, keeps all clients attributes and returns batches of data
-	Attrs:
+	Params:
 		group_num (int): id or number of group to make posts
 		uniq_p (str): yields data while photo id != this value
 		uniq_a (str): yields data while audio id != this value
 		update (bool): if True, uploads new ids to database
 
-	Params:
+	Attrs:
 		photo_list (list): list of photo ids
 		audio_list (list): list of audio ids
 		pid (int): photo pointer
@@ -50,7 +50,7 @@ class Client:
 	def __init__(self, group_num, uniq_p='', uniq_a='', update=False):
 
 		if 0<group_num<1000: #otherwise it's unique group id format (9 digits)
-			with open('clients_list.txt', 'r') as r_list:
+			with open(settings.CLIENTS_LIST_DIR, 'r') as r_list:
 				try:
 					group_id = r_list.readlines()[group_num-1]
 				except Exception as ex:
@@ -207,10 +207,10 @@ class Client:
 		options_file.close()
 
 		#get last group number for writing next
-		with open('clients_list.txt', 'r') as r_list:
+		with open(settings.CLIENTS_LIST_DIR, 'r') as r_list:
 			last_id = len(r_list.readlines())
 
-		with open('clients_list.txt', 'a') as w_list:
+		with open(settings.CLIENTS_LIST_DIR, 'a') as w_list:
 			if last_id==0:
 				w_list.write(f'1@{self.group_id}')
 			else:
@@ -250,7 +250,7 @@ class Client:
 		all_ids = []
 		for i in range(10):
 			ids = []
-			req = request + f'offset={i*1000}' + access_part
+			req = request + f'offset={i*1001}' + access_part
 			req = urllib.request.urlopen(req).read().decode('utf-8')
 			req = json.loads(req)
 
@@ -296,7 +296,7 @@ class Client:
 
 class PostBot:
 	"""working in pair with client, scope - make posts
-	Attrs:
+	Params:
 		group_num (int): id or number of group to make posts
 		uniq_p (str): yields data while photo id != this value
 		uniq_a (str): yields data while audio id != this value
@@ -305,7 +305,7 @@ class PostBot:
 		from_day (int): starts from that day
 		new_month (int): this month + this value
 
-	Params:
+	Attrs:
 		saveday (int): crutch for new month exception
 		id (generator): returns tuples of data to post
 	"""

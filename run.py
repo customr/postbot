@@ -1,5 +1,5 @@
 import argparse
-import core
+import postbot
 
 
 parser = argparse.ArgumentParser()
@@ -21,5 +21,5 @@ parser.add_argument('-m', type=int, default=0,
 
 params = vars(parser.parse_args())
 
-bot = core.PostBot(*list(params.values()))
+bot = postbot.PostBot(*list(params.values()))
 bot.run()
