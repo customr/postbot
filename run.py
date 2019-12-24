@@ -12,12 +12,14 @@ parser.add_argument('-d', type=int, default=0,
 	help="From which day bot must start posting.")
 parser.add_argument('-u', type=bool, default=False, 
 	help="Update mediafiles.")
-parser.add_argument('--up', type=str, default='', 
+parser.add_argument('--pp', type=str, default='', 
 	help="Posting while didn't met photo id.")
-parser.add_argument('--ua', type=str, default='', 
+parser.add_argument('--pa', type=str, default='', 
 	help="Posting while didn't met audio id.")
 parser.add_argument('-m', type=int, default=0, 
-	help="This month + this value.")
+	help="Post for this month.")
+parser.add_argument('-y', type=int, default=0, 
+	help="Post for this year.")
 
 params = vars(parser.parse_args())
 

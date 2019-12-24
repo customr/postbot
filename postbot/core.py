@@ -47,14 +47,14 @@ class Client:
 	function 'get_ids' is the main function in Client
 	it can return for you batch of data in special client's format for one post
 	"""
-	def __init__(self, group_num, uniq_p='', uniq_a='', update=False):
+	def __init__(self, group_num:int, uniq_p:str='', uniq_a:str='', update:bool=False):
 
 		if 0<group_num<1000: #otherwise it's unique group id format (9 digits)
 			with open(settings.CLIENTS_LIST_DIR, 'r') as r_list:
 				try:
 					group_id = r_list.readlines()[group_num-1]
 				except Exception as ex:
-					print('Error in client_list.txt\n\n', ex)
+					print('Incorrect group_num\n\n', ex)
 				else:
 					assert group_num==int(group_id.split('@')[0])
 					self.group_id = int(group_id.split('@')[1].rstrip('\n'))
@@ -79,12 +79,16 @@ class Client:
 		self.parse_optionsfile()
 
 		if (not self.photo_exist or not self.audio_exist) or update:
-			photo_htmlname = input('\nPhoto album id: ')
+			photoalbum_id = input('\nPhoto album id: ')
 			audio_htmlname = ''
 			if int(self.COUNT_AUDIO):
 				audio_htmlname = input('\nAudio html name: ')
 
-			self.create_mediafiles(photo_htmlname, audio_htmlname)
+			self.create_mediafiles(photoalbum_id, audio_htmlname)
+
+		if self.update: 
+			self.PHOTO_ID = 0
+			self.AUDIO_ID = 0
 
 		self.parse_mediafiles()
 
@@ -122,7 +126,7 @@ class Client:
 
 			yield data
 
-	def save_ids(self, offset=0):
+	def save_ids(self, offset:int=0):
 		"""
 		Args:
 			offset (int): if we need to backup for *offset* days
@@ -134,11 +138,15 @@ class Client:
 		for line in settings_old:
 			if 'PHOTO_ID' in line:
 				new_id = int(line.split(' = ')[1]) + self.pid + offset*int(self.COUNT_PHOTO)
+				if self.update: 
+					new_id = self.pid + offset*int(self.COUNT_PHOTO)
 				settings_new.write(f'PHOTO_ID = {new_id}\n')
 				self.pid = 0
 
 			elif 'AUDIO_ID' in line:
 				new_id = int(line.split(' = ')[1]) + self.aid + offset*int(self.COUNT_AUDIO)
+				if self.update: 
+					new_id = self.aid + offset*int(self.COUNT_AUDIO)
 				settings_new.write(f'AUDIO_ID = {new_id}\n')
 				self.aid = 0
 
@@ -147,7 +155,7 @@ class Client:
 
 		settings_new.close()
 
-	def create_mediafiles(self, album_id, audio_html):
+	def create_mediafiles(self, album_id:str, audio_html:str):
 		"""
 		Args:
 			photo_html (str): name of html file that contains in SAVE_DIR
@@ -231,7 +239,7 @@ class Client:
 		self.PHRASES = self.PHRASES.split(',')
 
 	@staticmethod
-	def album_parser(album_id):
+	def album_parser(album_id:str):
 		"""Get photo ids in album by VK-api method
 
 		Args:
@@ -250,7 +258,7 @@ class Client:
 		all_ids = []
 		for i in range(10):
 			ids = []
-			req = request + f'offset={i*1001}' + access_part
+			req = request + f'offset={i*1000+1}' + access_part
 			req = urllib.request.urlopen(req).read().decode('utf-8')
 			req = json.loads(req)
 
@@ -266,7 +274,7 @@ class Client:
 		return all_ids
 
 	@staticmethod
-	def html_parser(html_name):
+	def html_parser(html_name:str):
 		"""VK-api haven't get-method for audio, so i decided to parse them from html 
 		
 		Args:
@@ -303,52 +311,36 @@ class PostBot:
 		update (bool): if True, uploads new ids to database
 		drange (int): how many days to make posts
 		from_day (int): starts from that day
-		new_month (int): this month + this value
+		month (int): posting on this month
+		year (int): posting on this year
 
 	Attrs:
-		saveday (int): crutch for new month exception
 		id (generator): returns tuples of data to post
 	"""
-	def __init__(self, group_num, drange, from_day, update, uniq_p, uniq_a, new_month=0):
-		self.client = Client(group_num, update, uniq_p, uniq_a)
+	def __init__(self, group_num, drange, from_day, update, uniq_p, uniq_a, month=0, year=0):
+		self.client = Client(group_num, uniq_p, uniq_a, update)
 		self.range = int(drange)
 		self.from_day = int(from_day)
-		self.new_month = int(new_month)
-		self.saveday = 0
+		self.month = int(month)
+		self.year = int(year)
 		self.id = self.client.get_ids()
 
-	def get_times(self, dshift):
+	def get_times(self, dshift:int):
 		"""Get list of times to post in mktime format
 
 		Args:
 			dshift (int): offset from start
 		"""
-		y = int(strftime('%Y'))
-		m = int(strftime('%m'))
+		y = self.year if self.year else int(strftime('%Y'))
+		m = self.month if self.month else int(strftime('%m'))
 		d = self.from_day+dshift
 		times = []
 
 		for hour in self.client.HOURS:
-			try:
-				dt = datetime(
-					year=y, month=m+self.new_month, 
-					day=d-self.saveday, hour=hour, 
-					minute=int(self.client.MINUTE)
-					)
-			except Exception:
-				self.new_month += 1
-				self.saveday = d+1
-				if m+self.new_month>12:
-					m = 1
-					y += 1
-					self.new_month = 0
-					self.saveday = 0
-
-				dt = datetime(
-					year=y, month=m+self.new_month, 
-					day=d-self.saveday, hour=hour, 
-					minute=int(self.client.MINUTE)
-					)
+			dt = datetime(
+				year=y, month=m, day=d, hour=hour, 
+				minute=int(self.client.MINUTE)
+				)
 
 			times.append(int(mktime(dt.timetuple())))
 
@@ -394,7 +386,7 @@ class PostBot:
 		self.client.save_ids()
 
 
-def make_log(message):
+def make_log(message:str):
 	if settings.LOG:
 		with open(settings.LOG_DIR, 'a') as log:
 			if message:
