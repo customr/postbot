@@ -20,8 +20,8 @@ and then they can be scheduled in his VK-group with his flexible settings
 - **-r** (int) - How many days to make posts
 - **-d** (int) - From which day bot must start posting
 - **-u** (bool) - Update mediafiles if True
-- **-up** (bool) - Posting while didn't met photo id
-- **-ua** (bool) - Posting while didn't met audio id
+- **--pp** (bool) - Posting while didn't met photo id
+- **--pa** (bool) - Posting while didn't met audio id
 - **-m** (int) - Schedule from this month + this value
 
 

@@ -3,7 +3,7 @@ AUTHOR: Maksim Shipitsin
 USERNAME: customr
 GITHUB: https://github.com/customr/
 
-!!!KEEP THIS SETTINGS FILE WITH core.py
+!!!KEEP THIS SETTINGS FILE TOGETHER WITH core.py
 """
 import os
 
@@ -54,7 +54,8 @@ OPTIONS_PARAMS = (
 	'AUDIO_URL', 	#url of audios to post (str)
 	'SHUFFLE_PHOTO',#flag for randomly shuffles photo data (bool)
 	'SHUFFLE_AUDIO',#flag for randomly shuffles audio data (bool)
-	'RENT_FROM', 	#date from where bot were rented (date)
+	'UNIQ_DATA', 	#when update flag is up, the bot will work until it encounters the old identifier (bool)
+	'RENT_FROM', 	#date from where the bot were rented (date)
 	'USER_URL' 		#client vk page (str)
 	)
 

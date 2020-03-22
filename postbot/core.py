@@ -10,7 +10,7 @@ Structure:
 not quite good optimization, but actually we don't need that
 because VK-api doesn't allow us to make requests too often
 
-!!KEEP THIS FILE WITH settings.py
+!!KEEP THIS FILE TOGETHER WITH settings.py
 
 TODO: 
 	1. color recognizer, that can make an assembly of similar photos (most common color)
@@ -34,8 +34,6 @@ class Client:
 	"""id-manager, keeps all clients attributes and returns batches of data
 	Params:
 		group_num (int): id or number of group to make posts
-		uniq_p (str): yields data while photo id != this value
-		uniq_a (str): yields data while audio id != this value
 		update (bool): if True, uploads new ids to database
 
 	Attrs:
@@ -47,7 +45,7 @@ class Client:
 	function 'get_ids' is the main function in Client
 	it can return for you batch of data in special client's format for one post
 	"""
-	def __init__(self, group_num:int, uniq_p:str='', uniq_a:str='', update:bool=False):
+	def __init__(self, group_num:int, update:bool=False):
 
 		if 0<group_num<1000: #otherwise it's unique group id format (9 digits)
 			with open(settings.CLIENTS_LIST_DIR, 'r') as r_list:
@@ -64,8 +62,6 @@ class Client:
 
 		self.photo_list = []
 		self.audio_list = []
-		self.unique_photo = uniq_p
-		self.unique_audio = uniq_a
 		self.update = update
 
 		#check what we need to create
@@ -106,18 +102,17 @@ class Client:
 					id = self.photo_list[self.pid%len(self.photo_list)]
 					data[0].append(id)
 
-					if id == self.unique_photo:
-						raise ValueError('Detected previosly used photo id')
+					self.pid += 1 #update 
 
-					self.pid += 1 #update pointer
+					if self.UNIQ_DATA:
+						if self.pid >= self.pid_diff:
+							make_log(f'\n\t ENDED NEW PHOTO IDS. STOPPING')
+							raise ValueError('ended new photo ids')
 
 			if len(self.audio_list)>0:
 				for _ in range(counts_audio):
 					id = self.audio_list[self.aid%len(self.audio_list)]
 					data[1].append(id)
-
-					if id == self.unique_audio:
-						raise ValueError('Detected previosly used audio id')
 
 					self.aid += 1 #update pointer
 
@@ -127,7 +122,7 @@ class Client:
 			yield data
 
 	def save_ids(self, offset:int=0):
-		"""
+		"""saving new ids to the options file
 		Args:
 			offset (int): if we need to backup for *offset* days
 		"""
@@ -156,14 +151,17 @@ class Client:
 		settings_new.close()
 
 	def create_mediafiles(self, album_id:str, audio_html:str):
-		"""
+		"""parsing data ids and saving it into data files
 		Args:
 			photo_html (str): name of html file that contains in SAVE_DIR
 			audio_html (str): name of html file that contains in SAVE_DIR
 		"""
+		if self.UNIQ_DATA:
+			pcount_old = len(open(settings.PHOTO_DIR + str(self.group_id), 'rb').read())//20
+
 		photo_file = open(settings.PHOTO_DIR + str(self.group_id), 'w+')
 		audio_file = open(settings.AUDIO_DIR + str(self.group_id), 'w+')
-		
+
 		#parse ids from saved on disk html file
 		self.photo_ids = Client.album_parser(album_id)
 		self.audio_ids = Client.html_parser(audio_html)
@@ -185,6 +183,11 @@ class Client:
 		if len(self.audio_ids):
 			for uid in self.audio_ids[1:]: #starts from 1 because of html parse crutch
 				audio_file.write(uid+'\n')
+
+		if self.UNIQ_DATA:
+			self.pid_diff = len(self.photo_ids) - pcount_old
+			assert self.pid_diff>0, "parsing difference error"
+			print(f'PHOTO TO POST: {self.pid_diff}')
 
 	def parse_mediafiles(self):
 		#get file with ids from base
@@ -258,7 +261,7 @@ class Client:
 		all_ids = []
 		for i in range(10):
 			ids = []
-			req = request + f'offset={i*1000+1}' + access_part
+			req = request + f'&offset={i*1000+1}' + access_part
 			req = urllib.request.urlopen(req).read().decode('utf-8')
 			req = json.loads(req)
 
@@ -306,8 +309,6 @@ class PostBot:
 	"""working in pair with client, scope - make posts
 	Params:
 		group_num (int): id or number of group to make posts
-		uniq_p (str): yields data while photo id != this value
-		uniq_a (str): yields data while audio id != this value
 		update (bool): if True, uploads new ids to database
 		drange (int): how many days to make posts
 		from_day (int): starts from that day
@@ -317,8 +318,8 @@ class PostBot:
 	Attrs:
 		id (generator): returns tuples of data to post
 	"""
-	def __init__(self, group_num, drange, from_day, update, uniq_p, uniq_a, month=0, year=0):
-		self.client = Client(group_num, uniq_p, uniq_a, update)
+	def __init__(self, group_num, drange, from_day, update, month=0, year=0):
+		self.client = Client(group_num, update)
 		self.range = int(drange)
 		self.from_day = int(from_day)
 		self.month = int(month)
