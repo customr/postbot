@@ -12,16 +12,15 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PHOTO_DIR = os.path.join(BASE_DIR, 'clients/photo/')
 AUDIO_DIR = os.path.join(BASE_DIR, 'clients/audio/')
+VIDEO_DIR = os.path.join(BASE_DIR, 'clients/video/')
 OPTIONS_DIR = os.path.join(BASE_DIR, 'clients/options/')
 ACCESS_TOKEN_DIR = os.path.join(BASE_DIR, 'access_token.txt')
 CLIENTS_LIST_DIR = os.path.join(BASE_DIR, 'clients_list.txt')
 LOG_DIR = os.path.join(BASE_DIR, 'logs.txt')
 
-SAVE_DIR = '/home/customr/Downloads' #where html files should be saved (for id parsing)
-
 
 #create dir's and file's if not exists
-for directory in (PHOTO_DIR, AUDIO_DIR, OPTIONS_DIR):
+for directory in (PHOTO_DIR, AUDIO_DIR, VIDEO_DIR, OPTIONS_DIR):
 	if not os.path.exists(directory):
 		os.makedirs(directory)
 
@@ -56,7 +55,8 @@ OPTIONS_PARAMS = (
 	'SHUFFLE_AUDIO',#flag for randomly shuffles audio data (bool)
 	'UNIQ_DATA', 	#when update flag is up, the bot will work until it encounters the old identifier (bool)
 	'RENT_FROM', 	#date from where the bot were rented (date)
-	'USER_URL' 		#client vk page (str)
+	'USER_URL',		#client vk page (str)
+	'FIRST_PHOTO'	#exclusive option (just for my purpose)
 	)
 
 LOG = True #make logs if True

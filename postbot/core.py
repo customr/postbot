@@ -77,10 +77,7 @@ class Client:
 		if (not self.photo_exist or not self.audio_exist) or update:
 			photoalbum_id = input('\nPhoto album id: ')
 			audio_htmlname = ''
-			if int(self.COUNT_AUDIO):
-				audio_htmlname = input('\nAudio html name: ')
-
-			self.create_mediafiles(photoalbum_id, audio_htmlname)
+			self.create_mediafiles(photoalbum_id)
 
 		if self.update: 
 			self.PHOTO_ID = 0
@@ -96,6 +93,8 @@ class Client:
 
 		while True:
 			data = [[], [], '']
+			if self.FIRST_PHOTO: data[0].append(self.FIRST_PHOTO) #ignore this... it's just for my purpose
+
 			#even if in our data list will run out of data, we will starts over the list
 			if len(self.photo_list)>0:
 				for _ in range(counts_photo):
@@ -150,7 +149,7 @@ class Client:
 
 		settings_new.close()
 
-	def create_mediafiles(self, album_id:str, audio_html:str):
+	def create_mediafiles(self, album_id:str):
 		"""parsing data ids and saving it into data files
 		Args:
 			photo_html (str): name of html file that contains in SAVE_DIR
@@ -160,29 +159,17 @@ class Client:
 			pcount_old = len(open(settings.PHOTO_DIR + str(self.group_id), 'rb').read())//20
 
 		photo_file = open(settings.PHOTO_DIR + str(self.group_id), 'w+')
-		audio_file = open(settings.AUDIO_DIR + str(self.group_id), 'w+')
-
-		#parse ids from saved on disk html file
 		self.photo_ids = Client.album_parser(album_id)
-		self.audio_ids = Client.html_parser(audio_html)
 
 		#shuffles data if needed before being saved
 		if int(self.SHUFFLE_PHOTO):
 			print('SHUFFLING PHOTO')
 			shuffle(self.photo_ids)
 
-		if int(self.SHUFFLE_AUDIO):
-			print('SHUFFLING AUDIO')
-			shuffle(self.audio_ids)
-
 		#loads data into database
 		if len(self.photo_ids):
 			for uid in self.photo_ids:
 				photo_file.write(uid+'\n')
-
-		if len(self.audio_ids):
-			for uid in self.audio_ids[1:]: #starts from 1 because of html parse crutch
-				audio_file.write(uid+'\n')
 
 		if self.UNIQ_DATA:
 			self.pid_diff = len(self.photo_ids) - pcount_old
@@ -354,6 +341,7 @@ class PostBot:
 
 		for day in range(self.range):
 			times = self.get_times(day)
+			sleep(0.2)
 			for d in range(len(times)):
 				try:
 					data = next(self.id) #[[photos], [audios], [phrase]]
